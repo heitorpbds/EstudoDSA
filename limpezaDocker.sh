@@ -8,4 +8,4 @@ docker system prune -a --volumes
 
 # Verificar o uso do disco do docker
 
-docker system df
+docker system

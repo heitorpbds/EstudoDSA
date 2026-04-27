@@ -1,0 +1,17 @@
+.terraform/
+.git/
+*.tfstate
+*.tfstate.backup
+.DS_Store
+*.pdf
+*.gz
+*.csv
+*.log
+*.zip
+*.tar
+*.tar.gz
+*.bak
+*.backup
+*.tmp
+
+Airbyte-DBT-SQL/source/

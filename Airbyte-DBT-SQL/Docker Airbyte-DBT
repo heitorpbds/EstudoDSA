@@ -1,0 +1,58 @@
+# Para o serviço e remove o cluster
+abctl local uninstall
+kind delete cluster --name airbyte-abctl
+
+# Limpa o "lixo" do Docker (Volumes, Redes e Containers parados)
+docker system prune -a --volumes -f
+
+# Remove as pastas de configuração corrompidas
+sudo rm -rf ~/.airbyte/abctl
+
+# Cria a estrutura de pastas e garante o ownership para seu usuário
+mkdir -p ~/.airbyte/abctl/data
+sudo chown -R $USER:$USER ~/.airbyte
+
+# Aumenta o limite de arquivos abertos (evita crash do Java/Postgres)
+ulimit -n 65535
+
+# Libera permissão total para a pasta de dados (evita erro de PG_VERSION)
+sudo chmod -R 777 ~/.airbyte/abctl/data
+
+# Primeiro, baixe as imagens no seu Docker Host
+for img in \
+  "airbyte/bootloader:2.1.0" \
+  "airbyte/connector-sidecar:2.1.0" \
+  "airbyte/container-orchestrator:2.1.0" \
+  "airbyte/cron:2.1.0" \
+  "airbyte/db:1.7.0-17" \
+  "airbyte/manifest-server:7.10.0" \
+  "airbyte/server:2.1.0" \
+  "airbyte/worker:2.1.0" \
+  "airbyte/workload-api-server:2.1.0" \
+  "airbyte/workload-init-container:2.1.0" \
+  "airbyte/workload-launcher:2.1.0" \
+  "temporalio/auto-setup:1.27.2"; \
+do 
+  echo "Importando: $img"
+  docker save "$img" | docker exec -i airbyte-abctl-control-plane ctr --namespace=k8s.io images import -
+done
+
+# Agora, injete-as via Stream diretamente no runtime do Kind (ctr)
+# Repita para cada imagem se necessário, ou use o loop abaixo:
+for img in "airbyte/db:1.7.0-17" "airbyte/manifest-server:7.10.0" "temporalio/auto-setup:1.27.2" "airbyte/server:2.1.0" "airbyte/worker:2.1.0"; do
+  docker save $img | docker exec -i airbyte-abctl-control-plane ctr --namespace=k8s.io images import -
+done
+
+# Comando de instalação principal
+abctl local install
+
+# Em outro terminal, monitore os Pods (essencial para ver o progresso do bootloader)
+export KUBECONFIG=~/.airbyte/abctl/abctl.kubeconfig
+watch kubectl get pods -n airbyte-abctl
+
+# 1. Garante que você é o dono da pasta base
+sudo chown -R $USER:$USER /home/heitorpbds/.airbyte/abctl
+
+# 2. Concede permissão total de leitura/escrita/execução recursivamente
+# Isso garante que o UID do Postgres dentro do contêiner consiga acessar o PG_VERSION
+sudo chmod -R 777 /home/heitorpbds/.airbyte/abctl/data
