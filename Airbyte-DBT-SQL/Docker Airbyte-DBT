@@ -19,6 +19,27 @@ ulimit -n 65535
 sudo chmod -R 777 ~/.airbyte/abctl/data
 
 # Primeiro, baixe as imagens no seu Docker Host
+images=(
+  "airbyte/bootloader:2.1.0"
+  "airbyte/connector-sidecar:2.1.0"
+  "airbyte/container-orchestrator:2.1.0"
+  "airbyte/cron:2.1.0"
+  "airbyte/db:1.7.0-17"
+  "airbyte/manifest-server:7.10.0"
+  "airbyte/server:2.1.0"
+  "airbyte/worker:2.1.0"
+  "airbyte/workload-api-server:2.1.0"
+  "airbyte/workload-init-container:2.1.0"
+  "airbyte/workload-launcher:2.1.0"
+  "temporalio/auto-setup:1.27.2"
+)
+
+for img in "${images[@]}"; do
+  docker pull "$img"
+done
+
+# Agora, injete-as via Stream diretamente no runtime do Kind (ctr)
+# Repita para cada imagem se necessário, ou use o loop abaixo:
 for img in \
   "airbyte/bootloader:2.1.0" \
   "airbyte/connector-sidecar:2.1.0" \
@@ -35,12 +56,6 @@ for img in \
 do 
   echo "Importando: $img"
   docker save "$img" | docker exec -i airbyte-abctl-control-plane ctr --namespace=k8s.io images import -
-done
-
-# Agora, injete-as via Stream diretamente no runtime do Kind (ctr)
-# Repita para cada imagem se necessário, ou use o loop abaixo:
-for img in "airbyte/db:1.7.0-17" "airbyte/manifest-server:7.10.0" "temporalio/auto-setup:1.27.2" "airbyte/server:2.1.0" "airbyte/worker:2.1.0"; do
-  docker save $img | docker exec -i airbyte-abctl-control-plane ctr --namespace=k8s.io images import -
 done
 
 # Comando de instalação principal

@@ -1,7 +1,7 @@
 # Lab 2 - Construindo Pipeline EL(T) com Change Data Capture (CDC)
 
 # Cria um container Docker para ser usado como fonte
-docker run --name dsa-source -e POSTGRES_PASSWORD=dsa1010 -p 5439:5432 -d debezium/postgres:16
+docker run --name po --network kind -e POSTGRES_PASSWORD=dsa1010 -p 5439:5432 -d debezium/postgres:16
 
 # Executa o container e acessa via linha de comando
 docker exec -it dsa-source /bin/bash
